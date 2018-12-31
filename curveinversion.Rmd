@@ -1,23 +1,32 @@
 ---
-title: "curveinversion"
+title: "Asset Returns After First Curve Inversion"
 author: "Haishi Ning"
 date: "29/12/2018"
 output: html_document
 ---
   
-  ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+  ```{r setup, include=FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ## Constant Maturity Treasury Yield Curve
 
-```{r}
+```{r echo = FALSE, warning = FALSE, message = FALSE}
 library(readxl)
 library(dplyr)
 library(data.table)
 library(magrittr)
+library(plotly)
 
 tsy <- readxl::read_xls(paste0(getwd(),"/data/ACMTermPremium.xls"), sheet = 'ACM Daily') %>%
   data.table::as.data.table() %>%
-  mutate(DATE = as.Date(DATE, format = "%dd-%mm-%yyyy"))
+  mutate(DATE = as.Date(DATE, format = "%d-%B-%Y"))
+
+p <- plot_ly(tsy, x = ~DATE, y = ~ACMY02, name = '2Y', type = 'scatter', mode = 'lines') %>%
+  add_trace(y = ~ACMY10, name = '10Y', mode = 'lines') %>%
+  layout(title = 'Constant Maturity US Treasury Yield',
+         yaxis = list(zeroline = TRUE, title = "Yield in %"),
+         xaxis = list(zeroline = FALSE))
+
+p
 ```
