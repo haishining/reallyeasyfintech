@@ -1,0 +1,23 @@
+---
+title: "curveinversion"
+author: "Haishi Ning"
+date: "29/12/2018"
+output: html_document
+---
+  
+  ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Constant Maturity Treasury Yield Curve
+
+```{r}
+library(readxl)
+library(dplyr)
+library(data.table)
+library(magrittr)
+
+tsy <- readxl::read_xls(paste0(getwd(),"/data/ACMTermPremium.xls"), sheet = 'ACM Daily') %>%
+  data.table::as.data.table() %>%
+  mutate(DATE = as.Date(DATE, format = "%dd-%mm-%yyyy"))
+```
