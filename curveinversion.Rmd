@@ -6,10 +6,8 @@ output: html_document
 ---
   
 ```{r setup, include=FALSE, warning = FALSE, message = FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
-
-## Constant Maturity Treasury Yield Curve
 
 ```{r echo = FALSE, warning = FALSE, message = FALSE}
 library(readxl)
@@ -17,16 +15,49 @@ library(dplyr)
 library(data.table)
 library(magrittr)
 library(plotly)
+```
 
-tsy <- readxl::read_xls(paste0(getwd(),"/data/ACMTermPremium.xls"), sheet = 'ACM Daily') %>%
+## Curve Inversion Indicator Data
+We use ACM Term Premium dataset downloaded from New York Fed. This dataset includes daily and monthly fitted constant maturity treasury yields, risk neutural yields and term premium yields. The risk netural yields and term premium yields are construsted using a five-factor, no-arbitrage term structure model.
+```{r warning = FALSE, message = FALSE}
+url <- "https://www.newyorkfed.org/medialibrary/media/research/data_indicators/ACMTermPremium.xls"
+data_folder <- sprintf("%s/data", getwd())
+dir.create(data_folder, showWarnings = FALSE, recursive = TRUE)
+indicator_data <- sprintf("%s/ACMTermPremium%s.xls", data_folder, Sys.Date())
+download.file(
+  url,
+  indicator_data
+)
+tsy <- readxl::read_xls(indicator_data, sheet = 'ACM Daily') %>%
   data.table::as.data.table() %>%
   mutate(DATE = as.Date(DATE, format = "%d-%B-%Y"))
+```
 
-p <- plot_ly(tsy, x = ~DATE, y = ~ACMY02, name = '2Y', type = 'scatter', mode = 'lines') %>%
+## Fitted Constant Maturity Treasury Yields
+
+### Observed
+```{r warning = FALSE, message = FALSE}
+plot_ly(tsy, x = ~DATE, y = ~ACMY02, name = '2Y', type = 'scatter', mode = 'lines') %>%
   add_trace(y = ~ACMY10, name = '10Y', mode = 'lines') %>%
-  layout(title = 'Constant Maturity US Treasury Yield',
+  layout(title = 'Observed Yield',
          yaxis = list(zeroline = TRUE, title = "Yield in %"),
          xaxis = list(zeroline = FALSE))
+```
 
-p
+### Risk Neutural
+```{r warning = FALSE, message = FALSE}
+plot_ly(tsy, x = ~DATE, y = ~ACMRNY02, name = '2Y', type = 'scatter', mode = 'lines') %>%
+  add_trace(y = ~ACMRNY10, name = '10Y', mode = 'lines') %>%
+  layout(title = 'Risk Neutural Yield',
+         yaxis = list(zeroline = TRUE, title = "Yield in %"),
+         xaxis = list(zeroline = FALSE))
+```
+
+### Term Premium
+```{r warning = FALSE, message = FALSE}
+plot_ly(tsy, x = ~DATE, y = ~ACMTP02, name = '2Y', type = 'scatter', mode = 'lines') %>%
+  add_trace(y = ~ACMTP10, name = '10Y', mode = 'lines') %>%
+  layout(title = 'Term Premium',
+         yaxis = list(zeroline = TRUE, title = "Yield in %"),
+         xaxis = list(zeroline = FALSE))
 ```
