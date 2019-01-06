@@ -15,7 +15,10 @@ library(dplyr)
 library(data.table)
 library(magrittr)
 library(plotly)
+library(lubridate)
 ```
+
+The main purpose of this document is to illustrate how easy it is to conduct and share reproducible research. 
 
 ## Curve Inversion Indicator Data
 We use ACM Term Premium dataset downloaded from New York Fed. This dataset includes daily and monthly fitted constant maturity treasury yields, risk neutural yields and term premium yields. The risk netural yields and term premium yields are construsted using a five-factor, no-arbitrage term structure model.
@@ -24,12 +27,14 @@ url <- "https://www.newyorkfed.org/medialibrary/media/research/data_indicators/A
 data_folder <- sprintf("%s/data", getwd())
 dir.create(data_folder, showWarnings = FALSE, recursive = TRUE)
 indicator_data <- sprintf("%s/ACMTermPremium%s.xls", data_folder, Sys.Date())
-download.file(
-  url,
-  indicator_data
-)
+if (!file.exists(indicator_data))
+{
+  download.file(
+    url,
+    indicator_data
+  )
+}
 tsy <- readxl::read_xls(indicator_data, sheet = 'ACM Daily') %>%
-  data.table::as.data.table() %>%
   mutate(DATE = as.Date(DATE, format = "%d-%B-%Y"))
 ```
 
@@ -58,6 +63,99 @@ plot_ly(tsy, x = ~DATE, y = ~ACMRNY02, name = '2Y', type = 'scatter', mode = 'li
 plot_ly(tsy, x = ~DATE, y = ~ACMTP02, name = '2Y', type = 'scatter', mode = 'lines') %>%
   add_trace(y = ~ACMTP10, name = '10Y', mode = 'lines') %>%
   layout(title = 'Term Premium',
+         yaxis = list(zeroline = TRUE, title = "Yield in %"),
+         xaxis = list(zeroline = FALSE))
+```
+
+## Curve Inversion and Recession
+```{r warning = FALSE, message = FALSE, echo = FALSE}
+gfc_dates <- ymd('20071201'):ymd('20090630')
+gfc_colour <- "#C9EFF9"
+gfc_legend <- "Global Financial Crisis"
+
+dotcom_dates <- ymd('20010301'):ymd('20011130')
+dotcom_colour <- "#00FF7F"
+dotcom_legend <- "Dot.com Bust"
+
+slc_dates <- ymd('19900701'):ymd('19910331')
+slc_colour <- "#f4eb42"
+slc_legend <- "Savings & Loans Crisis"
+
+ratehk_dates <- ymd('19810701'):ymd('19821130')
+ratehk_colour <- "#6576E7"
+ratehk_legend <- "Rate Hikes"
+
+oilcrisis_dates <- ymd('19731101'):ymd('19750331')
+oilcrisis_colour <- "#EBA9F5"
+oilcrisis_legend <- "Oil Crisis"
+
+monetarytightening_dates <- ymd('19691201'):ymd('19701130')
+monetarytightening_colour <- "#DFE080"
+monetarytightening_legend <- "Monetary Tightening"
+
+tsy <- mutate(tsy, ACMY10Y2YBasis = ACMY10 - ACMY02,
+                   ACMRNY10Y2YBasis = ACMRNY10 - ACMRNY02,
+                   ACMTP10Y2YBasis = ACMTP10 - ACMTP02) %>%
+  mutate(gfc_pos_bar = ifelse(is.element(DATE, gfc_dates), 5, 0), gfc_neg_bar = ifelse(is.element(DATE, gfc_dates), -5, 0)) %>%
+  mutate(dotcom_pos_bar = ifelse(is.element(DATE, dotcom_dates), 5, 0), dotcom_neg_bar = ifelse(is.element(DATE, dotcom_dates), -5, 0)) %>%
+  mutate(slc_pos_bar = ifelse(is.element(DATE, slc_dates), 5, 0), slc_neg_bar = ifelse(is.element(DATE, slc_dates), -5, 0)) %>%
+  mutate(ratehk_pos_bar = ifelse(is.element(DATE, ratehk_dates), 5, 0), ratehk_neg_bar = ifelse(is.element(DATE, ratehk_dates), -5, 0)) %>%
+  mutate(oilcrisis_pos_bar = ifelse(is.element(DATE, oilcrisis_dates), 5, 0), oilcrisis_neg_bar = ifelse(is.element(DATE, oilcrisis_dates), -5, 0)) %>%
+  mutate(monetarytightening_pos_bar = ifelse(is.element(DATE, monetarytightening_dates), 5, 0), monetarytightening_neg_bar = ifelse(is.element(DATE, monetarytightening_dates), -5, 0))
+  
+plot_ly(tsy, x = ~DATE, y = ~ACMY10Y2YBasis, name = '10Y-2Y Observed Yield Basis', type = 'scatter', mode = 'lines', width = 1000) %>%
+  add_trace(y = ~ACMRNY10Y2YBasis, name = '10Y-2Y Risk Neutural Yield Basis', mode = 'lines') %>%
+  add_trace(y = ~ACMTP10Y2YBasis, name = '10Y-2Y Term Premium Basis', mode = 'lines') %>%
+  add_trace(x = ~DATE, y = ~gfc_pos_bar, type = 'bar', name = gfc_legend,
+            marker = list(color = gfc_colour),
+            hoverinfo = "text",
+            text = gfc_legend) %>%
+  add_trace(x = ~DATE, y = ~gfc_neg_bar, type = 'bar', showlegend = FALSE,
+            marker = list(color = gfc_colour),
+            hoverinfo = "text",
+            text = gfc_legend) %>%
+  add_trace(x = ~DATE, y = ~dotcom_pos_bar, type = 'bar', name = dotcom_legend,
+            marker = list(color = dotcom_colour),
+            hoverinfo = "text",
+            text = dotcom_legend) %>%
+  add_trace(x = ~DATE, y = ~dotcom_neg_bar, type = 'bar', showlegend = FALSE,
+            marker = list(color = dotcom_colour),
+            hoverinfo = "text",
+            text = dotcom_legend) %>%
+  add_trace(x = ~DATE, y = ~slc_pos_bar, type = 'bar', name = slc_legend,
+            marker = list(color = slc_colour),
+            hoverinfo = "text",
+            text = slc_legend) %>%
+  add_trace(x = ~DATE, y = ~slc_neg_bar, type = 'bar', showlegend = FALSE,
+            marker = list(color = slc_colour),
+            hoverinfo = "text",
+            text = slc_legend) %>%
+  add_trace(x = ~DATE, y = ~ratehk_pos_bar, type = 'bar', name = ratehk_legend,
+            marker = list(color = ratehk_colour),
+            hoverinfo = "text",
+            text = ratehk_legend) %>%
+  add_trace(x = ~DATE, y = ~ratehk_neg_bar, type = 'bar', showlegend = FALSE,
+            marker = list(color = ratehk_colour),
+            hoverinfo = "text",
+            text = ratehk_legend) %>%
+  add_trace(x = ~DATE, y = ~oilcrisis_pos_bar, type = 'bar', name = oilcrisis_legend,
+            marker = list(color = oilcrisis_colour),
+            hoverinfo = "text",
+            text = oilcrisis_legend) %>%
+  add_trace(x = ~DATE, y = ~oilcrisis_neg_bar, type = 'bar', showlegend = FALSE,
+            marker = list(color = oilcrisis_colour),
+            hoverinfo = "text",
+            text = oilcrisis_legend) %>%
+  add_trace(x = ~DATE, y = ~monetarytightening_pos_bar, type = 'bar', name = monetarytightening_legend,
+            marker = list(color = monetarytightening_colour),
+            hoverinfo = "text",
+            text = monetarytightening_legend) %>%
+  add_trace(x = ~DATE, y = ~monetarytightening_neg_bar, type = 'bar', showlegend = FALSE,
+            marker = list(color = monetarytightening_colour),
+            hoverinfo = "text",
+            text = monetarytightening_legend) %>%
+  layout(autosize = F, 
+         title = '10Y-2Y Yield Basis',
          yaxis = list(zeroline = TRUE, title = "Yield in %"),
          xaxis = list(zeroline = FALSE))
 ```
